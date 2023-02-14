@@ -1,93 +1,59 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import "bootstrap/dist/css/bootstrap.css";
-import ScrewCard from "./ScrewCard";
+import MeatCard from "./MeatCard";
 import * as bootstrap from "bootstrap";
 import "reflect-metadata";
 import { plainToInstance } from "class-transformer";
-import Toast from "./Toast";
 
-class ScrewData {
+class MeatData {
   id!: number;
+  animal!: string;
   type!: string;
-  size!: number;
-  stock!: number;
+  cut!: string;
   price!: number;
 }
 
-class orderResponse {
-  orderId!: number;
-  screwId!: number;
-  quantity!: number;
-  total!: number;
-}
-
 const App = () => {
-  const [screws, setScrews] = useState(new Set<ScrewData>());
+  const [meats, setMeats] = useState(new Set<MeatData>());
+  const [newAnimal, setNewAnimal] = useState("");
   const [newType, setNewType] = useState("");
-  const [newSize, setNewSize] = useState("");
-  const [newStock, setNewStock] = useState("");
+  const [newCut, setNewCut] = useState("");
   const [newPrice, setNewPrice] = useState("");
-  const [lastOrder, setLastOrder] = useState<orderResponse | null>(null);
-
-  const toast = useRef<bootstrap.Toast | null>(null);
 
   const loadData = async () => {
-    const response = await fetch("http://localhost:3000/api/screw");
+    const response = await fetch("http://localhost:3000/api/meat");
     const data: Object[] = await response.json();
 
-    setScrews(new Set(plainToInstance(ScrewData, data)));
+    setMeats(new Set(plainToInstance(MeatData, data)));
   };
 
-  const addScrew = async (screwData: Omit<ScrewData, "id">) => {
-    const response = await fetch(`http://localhost:3000/api/screw`, {
+  const addMeat = async (meatData: Omit<MeatData, "id">) => {
+    const response = await fetch(`http://localhost:3000/api/meat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(screwData),
+      body: JSON.stringify(meatData),
     });
 
     const data: Object = await response.json();
 
-    setScrews(new Set(screws).add(plainToInstance(ScrewData, data)));
+    setMeats(new Set(meats).add(plainToInstance(MeatData, data)));
   };
 
-  const deleteScrew = async (id: number) => {
-    const target = [...screws].find((target) => target.id === id);
+  const deleteMeat = async (id: number) => {
+    const target = [...meats].find((target) => target.id === id);
 
-    const newSet = new Set(screws);
+    const newSet = new Set(meats);
     newSet.delete(target!);
-    setScrews(newSet);
+    setMeats(newSet);
 
-    fetch(`http://localhost:3000/api/screw/${id}`, { method: "DELETE" });
-  };
-
-  const orderScrew = async (screwId: number, quantity: number) => {
-    const response = await fetch(`http://localhost:3000/api/screw/rendeles`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ screwId, quantity }),
-    });
-
-    const data: orderResponse = await response.json();
-
-    setLastOrder(data);
-    toast.current!.show();
-
-    loadData();
+    fetch(`http://localhost:3000/api/meat/${id}`, { method: "DELETE" });
   };
 
   useEffect(() => {
     loadData();
-
-    toast.current = new bootstrap.Toast(document.querySelector(".toast")!, {
-      animation: true,
-      autohide: true,
-      delay: 10000,
-    });
   }, []);
 
   return (
@@ -102,29 +68,29 @@ const App = () => {
                 setNewType(event.target.value);
               }}
             ></input>
+            <label className="mx-2 mb-1">Állat:</label>
+          </div>
+
+          <div className="form-floating mb-3 col-sm-3">
+            <input
+              className="form-control"
+              value={newAnimal}
+              onChange={(event) => {
+                setNewAnimal(event.target.value);
+              }}
+            ></input>
             <label className="mx-2 mb-1">Típus:</label>
           </div>
 
           <div className="form-floating mb-3 col-sm-3">
             <input
               className="form-control"
-              value={newSize}
+              value={newCut}
               onChange={(event) => {
-                setNewSize(event.target.value);
+                setNewCut(event.target.value);
               }}
             ></input>
-            <label className="mx-2 mb-1">Méret (mm):</label>
-          </div>
-
-          <div className="form-floating mb-3 col-sm-3">
-            <input
-              className="form-control"
-              value={newStock}
-              onChange={(event) => {
-                setNewStock(event.target.value);
-              }}
-            ></input>
-            <label className="mx-2 mb-1">Készlet:</label>
+            <label className="mx-2 mb-1">Rész:</label>
           </div>
 
           <div className="form-floating mb-3 col-sm-3">
@@ -141,11 +107,11 @@ const App = () => {
           <button
             className="btn btn-outline-secondary btn-lg btn-block"
             onClick={() => {
-              if (newType && newSize && newStock && newPrice) {
-                addScrew({
+              if (newType && newAnimal && newCut && newPrice) {
+                addMeat({
+                  animal: newAnimal,
                   type: newType,
-                  size: parseInt(newSize),
-                  stock: parseInt(newStock),
+                  cut: newCut,
                   price: parseFloat(newPrice),
                 });
               }
@@ -156,32 +122,19 @@ const App = () => {
         </div>
 
         <div className="row gx-3 gy-4 justify-content-start mx-auto">
-          {[...screws].map((screw) => (
-            <ScrewCard
+          {[...meats].map((meat) => (
+            <MeatCard
               key={crypto.randomUUID()}
-              id={screw.id}
-              type={screw.type}
-              stock={screw.stock}
-              size={screw.size}
-              price={screw.price}
-              orderCallback={orderScrew}
-              deleteCallback={() => deleteScrew(screw.id)}
+              id={meat.id}
+              animal={meat.animal}
+              type={meat.type}
+              cut={meat.cut}
+              price={meat.price}
+              deleteCallback={() => deleteMeat(meat.id)}
             />
           ))}
         </div>
       </div>
-
-      <Toast heading="A rendelés sikeresen leadva!">
-        {lastOrder !== null && (
-          <>
-            <p>A rendelés részletei:</p>
-            <p>Rendelés sorszáma: {lastOrder!.orderId}</p>
-            <p>Csavar azonosítója: {lastOrder!.screwId}</p>
-            <p>Csavar mennyisége: {lastOrder!.quantity} db</p>
-            <p>Összeg: {lastOrder!.total} Ft</p>
-          </>
-        )}
-      </Toast>
     </>
   );
 };
